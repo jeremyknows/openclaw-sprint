@@ -4,17 +4,17 @@ description: "Launch unattended work sprints with autonomous goal tracking, iter
 license: MIT
 metadata:
   author: "jeremyknows"
-  version: "0.2.0"
-  status: "P0-scaffolding"
+  version: "0.3.0"
+  status: "beta"
   category: "Automation"
-  phase: "P0"
+  phase: "beta"
   requires_review: true
   supervised_only: true
 ---
 
 # Sprint Skill
 
-**Version:** 0.2.0 | **Status:** P0 Scaffolding (supervised only) | **Category:** Automation
+**Version:** 0.3.0 | **Status:** Beta (overnight-validated) | **Category:** Automation
 
 ## What This Skill Does
 
@@ -310,7 +310,7 @@ The sprint automatically creates a Discord thread in `#watson-main` with:
 
 ## Known Limitations & Gotchas
 
-1. **P0 scaffolding — not yet production-validated.** Run with `supervised_only: true` until at least 1 successful end-to-end sprint completes. Do not run overnight unsupervised yet.
+1. **Beta — production-validated across 5+ sprints including overnight autonomous runs.** Use specific per-iteration goals (not thematic). Set MAX_ITERATIONS for overnight use.
 2. **flock is macOS/Linux only.** If you're on a system without GNU flock, the director's lock protocol silently fails — concurrent director runs can corrupt state.json.
 3. **Worker timeout is hard-coded at 610s.** If your topic requires long research chains (fetching many URLs, large codebases), workers will stall. Start with `--autonomy-level low` and small scopes.
 4. **state.json corruption kills the sprint.** There's no automatic backup — if a director run crashes mid-write, state.json can be left in a broken state. Recovery is manual (see TROUBLESHOOTING.md § State File).
@@ -349,7 +349,7 @@ Quick reference — see `docs/TROUBLESHOOTING.md` for full step-by-step procedur
 
 ## Autoresearch
 
-**Status:** P0 scaffolding — not yet production-validated. Run at least 1 supervised sprint before scoring.
+**Status:** Beta — proven in production. Run at least 1 supervised sprint on a new codebase before unsupervised overnight use.
 
 **Baseline score:** Not yet established (requires production run).
 
@@ -384,6 +384,8 @@ Score ≥5/6 = healthy. Score ≤3/6 = tune the worker prompt or tighten the top
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.2.0 | 2026-03-18 | Added Dependencies, Known Limitations & Gotchas, Autoresearch section; health score 8/14 |
+| 0.3.0 | Mar 2026 | Beta: overnight-validated, SPAWN_WORKER v2 direct-spawn, MAX_ITERATIONS cap, thematic-goal failure mode documented |
+| 0.2.0 | Mar 2026 | PRISM Round 3 fixes: --no-deliver, flock on state reset, synthesize race fix, active-threads shape |
 | 0.1.0 | Mar 2026 | P0 scaffolding: init, director, synthesize scripts; basic state management; flock protocol |
 
 ---

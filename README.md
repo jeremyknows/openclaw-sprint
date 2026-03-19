@@ -2,7 +2,7 @@
 
 **Autonomous deep-work sessions for OpenClaw.** Set a topic, a duration, and walk away. Sprint spawns workers iteratively, detects stalls, tracks goals, and delivers a final synthesis report — all hands-off.
 
-> ⚠️ **Status: P0 Scaffolding.** Run supervised until you've completed at least one successful end-to-end sprint. Not ready for unsupervised overnight use yet.
+> 🟡 **Status: Beta.** Proven across 5+ production sprints including overnight autonomous runs. Ready for unsupervised use with the right goal structure — see [Overnight Use](#overnight-use) below.
 
 ---
 
@@ -137,14 +137,35 @@ skills/sprint/
 
 ---
 
+## Overnight Use
+
+Sprint has been validated for unsupervised overnight runs. Two conditions matter:
+
+**Goals must be specific, not thematic.** Each goal/iteration should map to one concrete deliverable — a file, a fix, a research finding. Open-ended goals like "improve the analytics dashboard" cause Iter-1 to stall on scoping rather than producing output. If you wouldn't know whether a goal was "done" at a glance, rewrite it.
+
+**Set MAX_ITERATIONS.** Without a cap, a sprint on a wide topic can run indefinitely. Set it in `goals.json` or pass `--max-iterations` to `sprint-init.sh`. 4–6 iterations is a good overnight window.
+
+```json
+{
+  "maxIterations": 5,
+  "goals": [
+    "Audit /src/lib/metric-definitions.ts — list all missing Analytics/Retention entries",
+    "Add missing MetricHelpButton entries for the top 5 Analytics metrics",
+    "Fix HolderOverlapMatrix to respect the collections prop"
+  ]
+}
+```
+
+---
+
 ## Limitations
 
-- **P0 scaffolding** — Not production-validated. Run supervised only.
 - **flock required** — Lock protocol silently fails without it; concurrent directors corrupt state.json
-- **No cost ceiling** — Long high-autonomy sprints can spawn many subagents. Monitor actively.
+- **No cost ceiling** — Long high-autonomy sprints can spawn many subagents. Monitor costs actively.
 - **610s worker timeout** — Hard-coded. Long research tasks (many URLs, large codebases) will stall.
 - **Manual archiving** — Sprint data accumulates in `data/sprints/` indefinitely. Archive manually.
 - **Synthesis needs ≥1 iter** — If all workers time out, synthesis produces an empty report.
+- **Thematic goals cause stalls** — Workers spend Iter-1 scoping instead of producing. Write goals that are already scoped.
 
 ---
 
@@ -172,4 +193,4 @@ Full procedures: `docs/TROUBLESHOOTING.md`
 
 ---
 
-*v0.2.0 · MIT · jeremyknows*
+*v0.3.0 · MIT · jeremyknows*

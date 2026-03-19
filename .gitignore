@@ -1,0 +1,4 @@
+.DS_Store
+.v1-backup-*/
+*.bak
+node_modules/

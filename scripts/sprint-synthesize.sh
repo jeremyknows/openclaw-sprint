@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-WORKSPACE="$HOME/.openclaw/agents/main/workspace"
+WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/agents/main/workspace}"
 SPRINTS_DIR="$WORKSPACE/data/sprints"
 ACTIVE_THREADS="$WORKSPACE/config/active-threads.json"
 SPRINT_REGISTRY="$WORKSPACE/data/sprint-registry.json"
@@ -186,7 +186,7 @@ echo "- $DIGEST" >> "$MEMORY_FILE"
 log "Memory digest written to $MEMORY_FILE"
 
 # ── P1: Post full report to Discord thread ───────────────────────────────────
-DISCORD_SCRIPT="$HOME/.openclaw/agents/main/workspace/scripts/discord/discord-send-message.js"
+DISCORD_SCRIPT="$WORKSPACE/scripts/discord/discord-send-message.js"
 
 if [[ -n "$THREAD_ID" && "$THREAD_ID" != "null" && -f "$REPORT_FILE" ]]; then
   REPORT_CONTENT=$(cat "$REPORT_FILE")

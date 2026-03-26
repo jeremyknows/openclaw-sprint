@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-WORKSPACE="$HOME/.openclaw/agents/main/workspace"
+WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/agents/main/workspace}"
 SPRINTS_DIR="$WORKSPACE/data/sprints"
 EVENT_BUS="$HOME/.openclaw/events/bus.jsonl"
 WORKER_TIMEOUT=600   # seconds before treating missing iter-N.md as stall
@@ -75,6 +75,14 @@ flock -e -w 30 "$LOCK_FILE" jq -e '.sprintId and .status and .iterationCount and
 # ── Read state (single locked read for all fields) ───────────────────────────
 STATE_SNAPSHOT=$(flock -e -w 30 "$LOCK_FILE" cat "$STATE_FILE")
 STATUS=$(echo "$STATE_SNAPSHOT"          | jq -r '.status')
+
+# ── Early-exit guard: if sprint is already completed, exit immediately ───────
+if [[ "$STATUS" == "completed" ]]; then
+  log "Sprint already completed, exiting"
+  echo "INFO: Sprint $SPRINT_ID is completed — early exit"
+  exit 0
+fi
+
 ITERATION=$(echo "$STATE_SNAPSHOT"       | jq -r '.iterationCount')
 ENDS_AT=$(echo "$STATE_SNAPSHOT"         | jq -r '.endsAt')
 THREAD_ID=$(echo "$STATE_SNAPSHOT"       | jq -r '.threadId // ""')

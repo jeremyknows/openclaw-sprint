@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-WORKSPACE="$HOME/.openclaw/agents/main/workspace"
+WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/agents/main/workspace}"
 SPRINTS_DIR="$WORKSPACE/data/sprints"
 ACTIVE_THREADS="$WORKSPACE/config/active-threads.json"
 SPRINT_REGISTRY="$WORKSPACE/data/sprint-registry.json"
@@ -254,8 +254,8 @@ jq --arg sid "$SPRINT_ID" --arg topic "$(echo "$TOPIC" | sed 's/"/\\"/g')" \
    "$SPRINT_REGISTRY" > "$SPRINT_REGISTRY.tmp" && mv "$SPRINT_REGISTRY.tmp" "$SPRINT_REGISTRY"
 
 # ── P1: Schedule director cron (v2: agentTurn, direct sessions_spawn) ──────
-# Fixed schedule: 8,28,48 minutes past each hour (avoids Pulse slots)
-CRON_SCHEDULE="8,28,48 * * * *"
+# Schedule: configurable via SPRINT_CRON_SCHEDULE env var, default 8,28,48 (avoids Pulse slots)
+CRON_SCHEDULE="${SPRINT_CRON_SCHEDULE:-8,28,48 * * * *}"
 DIRECTOR_CMD="bash $WORKSPACE/skills/sprint/scripts/sprint-director.sh --sprint-id $SPRINT_ID"
 
 # v2: Director runs as agentTurn (not system-event). The cron agent runs the
@@ -286,7 +286,7 @@ Check the output and act on the FIRST matching pattern:
      flock -e -w 30 {state_file}.lock bash -c "jq '.status=\"active\"' '{state_file}' > '{state_file}.tmp' && mv '{state_file}.tmp' '{state_file}'"
 
      2. Signal completion:
-     bash $HOME/.openclaw/agents/main/workspace/scripts/sub-agent-complete.sh "sprint-worker-{sprint_id}-iter-{iteration}" "na" "Completed iteration {iteration}" "{thread_id}"
+     bash $WORKSPACE/scripts/sub-agent-complete.sh "sprint-worker-{sprint_id}-iter-{iteration}" "na" "Completed iteration {iteration}" "{thread_id}"
 
      3. Post iteration summary to Discord thread:
      Use the message tool: action=thread-reply, channel=discord, target={thread_id}, threadId={thread_id}

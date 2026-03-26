@@ -6,6 +6,7 @@
 set -euo pipefail
 
 WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/agents/main/workspace}"
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SPRINTS_DIR="$WORKSPACE/data/sprints"
 ACTIVE_THREADS="$WORKSPACE/config/active-threads.json"
 SPRINT_REGISTRY="$WORKSPACE/data/sprint-registry.json"
@@ -256,7 +257,7 @@ jq --arg sid "$SPRINT_ID" --arg topic "$(echo "$TOPIC" | sed 's/"/\\"/g')" \
 # ── P1: Schedule director cron (v2: agentTurn, direct sessions_spawn) ──────
 # Schedule: configurable via SPRINT_CRON_SCHEDULE env var, default 8,28,48 (avoids Pulse slots)
 CRON_SCHEDULE="${SPRINT_CRON_SCHEDULE:-8,28,48 * * * *}"
-DIRECTOR_CMD="bash $WORKSPACE/skills/sprint/scripts/sprint-director.sh --sprint-id $SPRINT_ID"
+DIRECTOR_CMD="bash $SKILL_DIR/scripts/sprint-director.sh --sprint-id $SPRINT_ID"
 
 # v2: Director runs as agentTurn (not system-event). The cron agent runs the
 # bash script, and if it outputs SPAWN_WORKER, calls sessions_spawn directly.

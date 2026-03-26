@@ -6,6 +6,7 @@
 set -euo pipefail
 
 WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/agents/main/workspace}"
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SPRINTS_DIR="$WORKSPACE/data/sprints"
 EVENT_BUS="$HOME/.openclaw/events/bus.jsonl"
 WORKER_TIMEOUT=600   # seconds before treating missing iter-N.md as stall
@@ -29,7 +30,7 @@ SPRINT_PATH="$SPRINTS_DIR/$SPRINT_ID"
 STATE_FILE="$SPRINT_PATH/state.json"
 LOCK_FILE="$SPRINT_PATH/.state.lock"
 DIRECTOR_LOCK="$SPRINT_PATH/.director.lock"  # H5: global per-sprint director lock
-SYNTHESIZE_SCRIPT="$WORKSPACE/skills/sprint/scripts/sprint-synthesize.sh"
+SYNTHESIZE_SCRIPT="$SKILL_DIR/scripts/sprint-synthesize.sh"
 
 [[ -d "$SPRINT_PATH" ]] || { echo "ERROR: sprint $SPRINT_ID not found"; exit 1; }
 [[ -f "$STATE_FILE"  ]] || { echo "ERROR: state.json missing for $SPRINT_ID"; exit 1; }
@@ -230,7 +231,7 @@ BUDGET=20480
   done
 
   # Component 3: worker instruction
-  prompt_file="$WORKSPACE/skills/sprint/scripts/sprint-worker-prompt.md"
+  prompt_file="$SKILL_DIR/scripts/sprint-worker-prompt.md"
   [[ -f "$prompt_file" ]] && cat "$prompt_file"
 
 } > "$CONTEXT_FILE.tmp"

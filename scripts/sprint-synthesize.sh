@@ -6,6 +6,7 @@
 set -euo pipefail
 
 WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/agents/main/workspace}"
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SPRINTS_DIR="$WORKSPACE/data/sprints"
 ACTIVE_THREADS="$WORKSPACE/config/active-threads.json"
 SPRINT_REGISTRY="$WORKSPACE/data/sprint-registry.json"

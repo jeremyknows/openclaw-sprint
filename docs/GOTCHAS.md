@@ -131,6 +131,72 @@ fi
 
 ---
 
+## Gotcha 10: Director Cron Keeps Spawning Workers After You Take Over
+
+**What happened:** After DoDo took over manually (reading pages directly instead of using workers), the director cron kept firing every 20 minutes and spawning new workers. These workers tried to write to the same analysis files DoDo was already writing — creating conflicts mid-session.
+
+**Why:** The director has no concept of "the agent took over." It sees `status: active` and spawns workers on schedule regardless of whether someone is already doing the work.
+
+**Fix:** When taking over from workers, immediately set sprint status to `paused` or update state to skip the current iteration:
+```bash
+jq '.status = "paused"' state.json > tmp && mv tmp state.json
+```
+Resume when you're done with the manual iteration.
+
+**Prevention:** The director should check if the current iteration's output file already exists before spawning a worker.
+
+---
+
+## Gotcha 11: State Machine Can't Judge Output Quality
+
+**What happened:** Workers produced analysis files with placeholder tags, blog-synthesized content instead of panel reads, and incomplete coverage. The sprint state machine marked these iterations as "complete" because the file existed and the worker session ended. No quality check occurred.
+
+**Why:** The director's completion check is binary: did the worker finish? Did it write a file? It doesn't verify content quality, check for placeholder tags, or validate against success criteria.
+
+**Fix:** Add post-iteration quality gates in the director:
+- Check for `[DETAIL NEEDED FROM PANELS]` or `[UNREADABLE]` markers
+- Verify minimum file size (e.g., >5KB for a comic analysis)
+- Optionally: run a quick LLM check against the goal's success criteria
+
+**Prevention:** Build quality validation into `sprint-director.sh` as a mandatory step between worker completion and state advancement.
+
+---
+
+## Gotcha 12: No Context Handoff Between Sessions = Expensive Cold Restart
+
+**What happened:** DoDo's session hit context limits and had to restart mid-sprint. The new session had no knowledge of what was already done, what strategies worked/failed, or the current sprint state. ~45 minutes spent reconstructing context that could have been preserved.
+
+**Why:** The sprint skill doesn't write a checkpoint file when a session ends. The next session starts from scratch, reading state.json but missing all the learned context (which workers failed, why, what strategy changes were made).
+
+**Fix:** Add a mandatory checkpoint at session end (or before compaction):
+```bash
+# Write sprint-checkpoint.md with:
+# - Current iteration + what's been done
+# - Strategy changes made mid-sprint
+# - Known issues with remaining goals
+# - What worked vs what didn't
+```
+
+**Prevention:** Add a `checkpoint` command to the guard/director that writes a markdown file. Make it part of the session end trap. New sessions read the checkpoint first.
+
+---
+
+## Gotcha 13: Vague Goals Produce Bad Output — Specificity is Everything
+
+**What happened:** Early iterations used generic goals like "analyze this comic." Workers produced surface-level summaries from blog posts. When goals were rewritten with explicit questions ("Does the comic address Gary Bee's connection to GaryVee explicitly or implicitly?") and citation requirements ("all claims must reference page numbers"), output quality jumped dramatically.
+
+**Why:** LLM workers optimize for "completing the task." A vague task is easy to complete badly. A specific task with testable criteria forces deeper work.
+
+**Fix:** Every goal in `goals.json` should read like a test:
+- Ask specific questions the worker must answer
+- Require page/panel citations for every claim
+- Define minimum output length
+- List what "done" looks like concretely
+
+**Prevention:** Before launching a sprint, review each goal and ask: "Could a lazy worker mark this complete with a 200-word blog summary?" If yes, the goal isn't specific enough.
+
+---
+
 ## Summary: The Three Rules
 
 1. **Don't manually trigger what cron should handle.** The sprint skill is designed for cron-driven execution. Manual intervention causes state mismatches.

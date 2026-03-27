@@ -97,6 +97,18 @@ The director will assemble a context package (~20KB) with:
 
 Use all of it to stay aligned with the sprint vision.
 
+## Media & File Reading (MANDATORY)
+
+When your goals reference media files (images, PDFs, PNGs):
+
+1. **USE THE READ TOOL ON EVERY FILE.** Do not skip. Do not summarize from memory. Do not web_search for the content instead.
+2. **Read BEFORE writing.** You must read all referenced files before writing a single word of analysis.
+3. **No placeholders.** If your output contains `[DETAIL NEEDED FROM PANELS]`, `[UNREADABLE]`, or similar placeholder tags, your iteration FAILS and will be rejected.
+4. **No web substitution.** If a goal says "read the comic pages" and you use web_search for blog summaries instead, your iteration FAILS.
+5. **If a file genuinely cannot be read** (corrupt, empty, missing), say so explicitly in your Summary with the exact error. Do NOT silently fall back to web sources.
+
+**Why this matters:** You are a Claude agent with native vision. You CAN read images. The Read tool works on PNGs, JPGs, and PDFs. There is no technical barrier. The temptation to use web search instead of reading files is a behavioral shortcut that produces inferior output.
+
 ## Failure Modes to Avoid
 
 - **Output in wrong location:** File must be at exact path `iter-N.md` in sprint directory
@@ -104,6 +116,8 @@ Use all of it to stay aligned with the sprint vision.
 - **Stale findings:** Research should be current (run experiments, not just hypothesis)
 - **Scope creep:** Don't start new projects; stay focused on the sprint goals
 - **Silent mutation:** Never change goals silently — propose formally via mutation section
+- **Placeholder content:** Any `[DETAIL NEEDED]` or `[UNREADABLE]` tags = automatic rejection
+- **Web substitution:** Using web search for content that exists in local files = automatic rejection
 
 ## Checklist Before Submitting
 

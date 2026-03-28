@@ -310,14 +310,16 @@ The sprint automatically creates a Discord thread in `#watson-main` with:
 
 ## Known Limitations & Gotchas
 
-1. **Beta — production-validated across 5+ sprints including overnight autonomous runs.** Use specific per-iteration goals (not thematic). Set MAX_ITERATIONS for overnight use.
-2. **flock is macOS/Linux only.** If you're on a system without GNU flock, the director's lock protocol silently fails — concurrent director runs can corrupt state.json.
-3. **Worker timeout is hard-coded at 610s.** If your topic requires long research chains (fetching many URLs, large codebases), workers will stall. Start with `--autonomy-level low` and small scopes.
-4. **state.json corruption kills the sprint.** There's no automatic backup — if a director run crashes mid-write, state.json can be left in a broken state. Recovery is manual (see TROUBLESHOOTING.md § State File).
-5. **Goal mutations require human ACK via Discord reaction.** If you're away from Discord, mutations queue and the sprint stalls waiting. For overnight sprints: pre-define goals.json fully or set autonomy to `high` to allow auto-mutation.
-6. **Synthesis requires at least 1 iter-N.md.** If all workers time out and no iterations complete, synthesis produces an empty report. The sprint is not retried automatically.
-7. **Sprint data lives in data/sprints/ indefinitely.** No auto-archiving or TTL. Archive manually after reviewing SPRINT-REPORT.md, or disk fills slowly.
-8. **No cost ceiling.** A 6-hour high-autonomy sprint can spawn many subagents. Each spawns an LLM session. Uncapped cost risk on long sprints — monitor actively.
+> Extended usage patterns moved to `USAGE-PATTERNS.md`.
+
+1. **Thematic goals produce dramatically worse output than specific goals.** "Analyze CB#1 deeply" → thematic summary. "Read CB#7, extract all named characters, all locations, all plot beats with page citations, answer these 6 questions: ..." → correct, verifiable output. Write goals as graded tests: list every question with expected citation format.
+2. **flock is macOS/Linux only.** Without GNU flock, the director's lock protocol silently fails — concurrent director runs corrupt state.json. Verify: `which flock`.
+3. **Worker timeout is hard-coded at 610s.** Long research chains (many URLs, large codebases) will stall. Start with `--autonomy-level low` and small scopes.
+4. **state.json corruption kills the sprint.** Director now auto-backs up to `.bak` before each write, but recovery from mid-crash is manual (see TROUBLESHOOTING.md § State File).
+5. **Goal mutations require human ACK via Discord reaction.** Away from Discord = sprint stalls. For overnight sprints: pre-define goals.json fully or use `--autonomy-level high`.
+6. **No cost ceiling.** A 6-hour high-autonomy sprint can spawn many subagents. Uncapped cost risk — monitor actively.
+7. **Workers cannot reliably analyze image files.** PDFs-as-PNGs, screenshots, scanned docs → silent fallback to web synthesis → looks correct, is fabricated. Use workers for text/code/research only. Signal of failure: generic output, no exact quotes, small file size.
+8. **Director cron keeps firing if you take over mid-sprint.** Set `state.json` status to `paused` before doing direct in-session work, or you'll get write-race conditions with concurrent director-spawned workers.
 
 ---
 

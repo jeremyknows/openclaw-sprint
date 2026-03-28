@@ -16,6 +16,8 @@ metadata:
 
 **Version:** 0.3.0 | **Status:** Beta (overnight-validated) | **Category:** Automation
 
+> **Before writing goals.json:** Read [`SPRINT-DESIGN-GUIDE.md`](SPRINT-DESIGN-GUIDE.md). Sprint quality is determined almost entirely by how goals are written — mechanics alone won't save a bad design.
+
 ## What This Skill Does
 
 The Sprint Skill is a **self-driving automation framework** for running unattended work sessions. You provide a topic, goals, and a duration. The skill spawns autonomous workers across multiple iterations, detects stalls, tracks progress, and synthesizes final results—all hands-off.

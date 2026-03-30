@@ -21,7 +21,7 @@
 
 ```bash
 # OpenClaw
-git clone https://github.com/jeremyknows/openclaw-sprint ~/.openclaw/skills/sprint
+git clone https://github.com/jeremyknows/sprint-openclaw ~/.openclaw/skills/sprint-openclaw
 ```
 
 ---

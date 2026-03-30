@@ -1,5 +1,5 @@
 ---
-name: sprint
+name: sprint-openclaw
 description: "Launch unattended work sprints with autonomous goal tracking, iterative worker spawning, stall detection, and synthesis. Use when you want focused deep work on a concrete topic with automated progress tracking and iteration management. NOT for open-ended exploration, work requiring frequent human decisions, or externally-facing actions (deployments, emails, posts)."
 license: MIT
 metadata:

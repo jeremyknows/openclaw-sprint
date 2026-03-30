@@ -4,7 +4,7 @@ description: "Launch unattended work sprints with autonomous goal tracking, iter
 license: MIT
 metadata:
   author: "jeremyknows"
-  version: "0.3.0"
+  version: "0.4.0"
   status: "beta"
   category: "Automation"
   phase: "beta"
@@ -15,6 +15,8 @@ metadata:
 # Sprint Skill
 
 **Version:** 0.3.0 | **Status:** Beta (overnight-validated) | **Category:** Automation
+
+> **Before writing goals.json:** Read [`SPRINT-DESIGN-GUIDE.md`](SPRINT-DESIGN-GUIDE.md). Sprint quality is determined almost entirely by how goals are written — mechanics alone won't save a bad design.
 
 ## What This Skill Does
 
@@ -114,6 +116,21 @@ The **state.json** file is the single source of truth:
   "endsAt": "ISO 8601 timestamp",
   "completedGoals": ["G1", "G3"],
   "mutations": [{ "proposedBy": "director", "oldGoal": "G2", "newGoal": "..." }]
+}
+```
+
+**Goals support a `type` field:**
+- `"type": "execution"` (default) — normal goal, worker executes and produces output
+- `"type": "discovery"` — first cycle only; worker scans/researches and writes `goal-proposals.json` with 2-4 concrete goals; director merges them into `state.json` next cycle with `"depends_on": ["G0"]` auto-set
+
+Use `discovery` when the topic is too vague to write specific goals upfront ("improve security", "reduce tech debt"). Let the first worker scope the sprint:
+
+```json
+{
+  "id": "G0",
+  "type": "discovery",
+  "title": "Scan the codebase for security issues and write goal-proposals.json with 3-4 specific actionable goals",
+  "status": "pending"
 }
 ```
 
@@ -271,6 +288,17 @@ Each iteration file contains:
 - `## Summary` — What the worker did this iteration
 - `## Artifacts` — Files created, code written, analysis performed
 - `## Next` — Recommended next steps
+- `## Handoff` — **Required.** What the next worker needs to know
+
+**The Handoff contract:** Workers MUST end every `iter-N.md` with a `## Handoff` section:
+```markdown
+## Handoff
+- **Accomplished:** [specific files written, analyses completed]
+- **Remaining:** [what's left for the next worker to pick up]
+- **Decisions made:** [any choices made that future workers should follow]
+- **Read first:** [files to read before starting, in order]
+```
+The director reads all Handoff sections and inlines them into the next worker's briefing. This is the primary mechanism for knowledge transfer across stateless cycles — without it, each worker starts blind.
 
 ### Watch Progress in Discord
 
@@ -300,24 +328,53 @@ The sprint automatically creates a Discord thread in `#watson-main` with:
 
 ## Key Constraints
 
-1. **Topic must be concrete.** "Research security" ✗ | "Research OAuth 2.1 hybrid auth patterns" ✓
+1. **Topic must be concrete.** "Research security" ✗ | "Research OAuth 2.1 hybrid auth patterns" ✓ — or use a `discovery` goal to let the first worker define the scope.
 2. **Duration must be achievable.** "Overnight" is OK if topic is focused. "Implement a full API server" requires multiple days.
 3. **Autonomy is progressive.** First sprint: `low`. After proving safe: `medium`. After 2 successful `medium` sprints: `high` (overnight).
 4. **No external destructive actions** without explicit operator confirmation (even at `high` autonomy level for emails, tweets, prod deploys).
 5. **Goal mutations require operator ACK.** If director proposes goal changes mid-sprint, they're added to `mutations[]` and need Discord reaction approval before acting.
+6. **Goal quality determines sprint quality.** Use the checklist below before every sprint.
+
+### Goal-Writing Checklist
+
+Run each goal through this before starting. A goal that fails any item will produce poor worker output.
+
+**For each goal's title/description:**
+- [ ] States a concrete deliverable, not an activity ("Write X" not "Work on X")
+- [ ] Names the output file(s) and their format (markdown table, JSON, analysis report)
+- [ ] Is completable by one worker in ~10–30 minutes
+
+**For the context/briefing you give the worker:**
+- [ ] Lists specific file paths or directories to read
+- [ ] States what tools/commands to use (grep, jq, cat, etc.)
+- [ ] Includes domain knowledge the worker wouldn't have (naming conventions, what "done" looks like)
+- [ ] If iterative: tells the worker where prior cycle output lives (which iter files to read first)
+
+**For each goal's acceptance criteria:**
+- [ ] Is a command or file check, not a judgment call
+- [ ] Could be verified by a script with zero human interpretation
+- [ ] Examples: `test -f file.md`, `grep -c 'pattern' file`, `wc -l`, `jq '.goals | length'`
+
+**For the goal set as a whole:**
+- [ ] Goals ordered smallest → largest (early wins build momentum)
+- [ ] Dependencies explicit (G2 depends_on G1 if it reads G1's output)
+- [ ] No two goals write to the same file
+- [ ] At least one goal is completable in a single iteration
 
 ---
 
 ## Known Limitations & Gotchas
 
-1. **Beta — production-validated across 5+ sprints including overnight autonomous runs.** Use specific per-iteration goals (not thematic). Set MAX_ITERATIONS for overnight use.
-2. **flock is macOS/Linux only.** If you're on a system without GNU flock, the director's lock protocol silently fails — concurrent director runs can corrupt state.json.
-3. **Worker timeout is hard-coded at 610s.** If your topic requires long research chains (fetching many URLs, large codebases), workers will stall. Start with `--autonomy-level low` and small scopes.
-4. **state.json corruption kills the sprint.** There's no automatic backup — if a director run crashes mid-write, state.json can be left in a broken state. Recovery is manual (see TROUBLESHOOTING.md § State File).
-5. **Goal mutations require human ACK via Discord reaction.** If you're away from Discord, mutations queue and the sprint stalls waiting. For overnight sprints: pre-define goals.json fully or set autonomy to `high` to allow auto-mutation.
-6. **Synthesis requires at least 1 iter-N.md.** If all workers time out and no iterations complete, synthesis produces an empty report. The sprint is not retried automatically.
-7. **Sprint data lives in data/sprints/ indefinitely.** No auto-archiving or TTL. Archive manually after reviewing SPRINT-REPORT.md, or disk fills slowly.
-8. **No cost ceiling.** A 6-hour high-autonomy sprint can spawn many subagents. Each spawns an LLM session. Uncapped cost risk on long sprints — monitor actively.
+> Extended usage patterns moved to `USAGE-PATTERNS.md`.
+
+1. **Thematic goals produce dramatically worse output than specific goals.** "Analyze CB#1 deeply" → thematic summary. "Read CB#7, extract all named characters, all locations, all plot beats with page citations, answer these 6 questions: ..." → correct, verifiable output. Write goals as graded tests: list every question with expected citation format.
+2. **flock is macOS/Linux only.** Without GNU flock, the director's lock protocol silently fails — concurrent director runs corrupt state.json. Verify: `which flock`.
+3. **Worker timeout is hard-coded at 610s.** Long research chains (many URLs, large codebases) will stall. Start with `--autonomy-level low` and small scopes.
+4. **state.json corruption kills the sprint.** Director now auto-backs up to `.bak` before each write, but recovery from mid-crash is manual (see TROUBLESHOOTING.md § State File).
+5. **Goal mutations require human ACK via Discord reaction.** Away from Discord = sprint stalls. For overnight sprints: pre-define goals.json fully or use `--autonomy-level high`.
+6. **No cost ceiling.** A 6-hour high-autonomy sprint can spawn many subagents. Uncapped cost risk — monitor actively.
+7. **Workers cannot reliably analyze image files.** PDFs-as-PNGs, screenshots, scanned docs → silent fallback to web synthesis → looks correct, is fabricated. Use workers for text/code/research only. Signal of failure: generic output, no exact quotes, small file size.
+8. **Director cron keeps firing if you take over mid-sprint.** Set `state.json` status to `paused` before doing direct in-session work, or you'll get write-race conditions with concurrent director-spawned workers.
 
 ---
 
@@ -360,7 +417,7 @@ Quick reference — see `docs/TROUBLESHOOTING.md` for full step-by-step procedur
 | 1 | Did the sprint complete at least 50% of stated goals? | |
 | 2 | Did synthesis produce a usable SPRINT-REPORT.md? | |
 | 3 | Were there ≤2 consecutive stalls in any 2-hour window? | |
-| 4 | Did worker outputs have all 3 required sections (Summary/Artifacts/Next)? | |
+| 4 | Did worker outputs have all 4 required sections (Summary/Artifacts/Next/Handoff)? | |
 | 5 | Did the sprint stay within its autonomy-level constraints? | |
 | 6 | Was the final report useful without manual cleanup? | |
 
@@ -383,9 +440,9 @@ Score ≥5/6 = healthy. Score ≤3/6 = tune the worker prompt or tighten the top
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.2.0 | 2026-03-18 | Added Dependencies, Known Limitations & Gotchas, Autoresearch section; health score 8/14 |
+| 0.4.0 | 2026-03-30 | Backport from sprint-cowork: `## Handoff` contract (required iter section + director validation), discovery goals (`type: "discovery"`), Goal-Writing Checklist (3-part). All docs + worker prompt aligned. |
 | 0.3.0 | Mar 2026 | Beta: overnight-validated, SPAWN_WORKER v2 direct-spawn, MAX_ITERATIONS cap, thematic-goal failure mode documented |
-| 0.2.0 | Mar 2026 | PRISM Round 3 fixes: --no-deliver, flock on state reset, synthesize race fix, active-threads shape |
+| 0.2.0 | Mar 2026 | PRISM Round 3 fixes: --no-deliver, flock on state reset, synthesize race fix, active-threads shape; Added Dependencies, Gotchas, Autoresearch section |
 | 0.1.0 | Mar 2026 | P0 scaffolding: init, director, synthesize scripts; basic state management; flock protocol |
 
 ---

@@ -121,6 +121,12 @@ Researched OAuth 2.1 spec and analyzed VeeFriends current auth stack.
 
 ## Next
 Recommend: Propose OAuth 2.1 + passkey hybrid flow. Awaiting approval to design implementation.
+
+## Handoff
+- **Accomplished:** OAuth 2.1 spec researched; current VeeFriends auth stack mapped; hybrid flow recommended
+- **Remaining:** Implementation design pending operator approval
+- **Decisions made:** Recommended hybrid passkey flow over pure OAuth 2.1 (lower migration cost)
+- **Read first:** recommendation-hybrid-flow.md before designing implementation
 ```
 
 ---
@@ -153,6 +159,12 @@ Implemented OAuth 2.1 flow with passkey fallback. Integration tests passing.
 
 ## Next
 Ready for code review. Recommend next iteration: database migration for passkey storage + user signup flow.
+
+## Handoff
+- **Accomplished:** OAuth client + passkey handler implemented; 200 integration tests passing; PR #247 open
+- **Remaining:** Database migration for passkey storage; user signup flow update
+- **Decisions made:** Used FIDO2 library over manual WebAuthn (better browser compatibility)
+- **Read first:** /src/auth/oauth-client.ts for the token exchange pattern before touching signup flow
 ```
 
 ---
@@ -184,6 +196,12 @@ Implemented and deployed rate limiting middleware. Rolled out to 5% of traffic, 
 
 ## Next
 Ramping traffic to 100%. Stalling rate limiter status check — recommend human review before full rollout.
+
+## Handoff
+- **Accomplished:** Rate limiter implemented, tested, merged to main, deployed to prod-staging at 5% traffic
+- **Remaining:** Traffic ramp to 100%; full rollout sign-off needed
+- **Decisions made:** Per-IP sliding window (not token bucket) — lower memory footprint at VF traffic levels
+- **Read first:** monitoring dashboard before making any rollout decisions
 ```
 
 ---

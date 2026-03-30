@@ -1,5 +1,7 @@
 #!/bin/bash
-# sprint-director.sh — Sprint Director (v0.7)
+# sprint-director.sh — Sprint Director (v0.8)
+# Changes v0.8: C1 single-goal injection + completed list, C2 state.json auto-backup,
+#               C3 iter-N.md section validation (## Summary/Artifacts/Next)
 # Cron payload: 8,28,48 * * * * (avoids all Pulse slots: :00,:03,:05,:10,:15,:30,:35)
 # Uses file-argument flock style (compatible with bash 3.2 / macOS).
 
@@ -78,8 +80,16 @@ STATE_SNAPSHOT=$(flock -e -w 30 "$LOCK_FILE" cat "$STATE_FILE")
 STATUS=$(echo "$STATE_SNAPSHOT"          | jq -r '.status')
 
 # ── Early-exit guard: if sprint is already completed, exit immediately ───────
-if [[ "$STATUS" == "completed" ]]; then
+# Safety net: also disable this director cron (synthesis should have deleted it,
+# but may have failed due to missing CLI auth or network issues)
+if [[ "$STATUS" == "completed" || "$STATUS" == "complete" ]]; then
   log "Sprint already completed, exiting"
+  DIRECTOR_CRON_ID=$(echo "$STATE_SNAPSHOT" | jq -r '.directorCronId // ""')
+  if [[ -n "$DIRECTOR_CRON_ID" && "$DIRECTOR_CRON_ID" != "null" ]] && command -v openclaw &>/dev/null; then
+    openclaw cron edit "$DIRECTOR_CRON_ID" --disable 2>/dev/null && \
+      log "Self-disabled director cron $DIRECTOR_CRON_ID (cleanup)" || \
+      log "WARN: Failed to self-disable cron $DIRECTOR_CRON_ID"
+  fi
   echo "INFO: Sprint $SPRINT_ID is completed — early exit"
   exit 0
 fi
@@ -96,6 +106,33 @@ NOW=$(date -u -Iseconds)
 NOW_EPOCH=$(date -u +%s)
 
 log "Fired. status=$STATUS iteration=$ITERATION stalls=${CONSECUTIVE_STALLS}/${TOTAL_STALLS}"
+
+# ── Step 3: Validate prior iter file (if exists) ────────────────────────────
+# Check that the most recent iter file has required sections before proceeding.
+PREV_ITER_FILE="$SPRINT_PATH/iter-${ITERATION}.md"
+if [[ $ITERATION -gt 0 && -f "$PREV_ITER_FILE" ]]; then
+  REQUIRED_SECTIONS=("## Summary" "## Artifacts" "## Next" "## Handoff")
+  ITER_VALIDATION_FAILED=false
+  for section in "${REQUIRED_SECTIONS[@]}"; do
+    if ! grep -q "$section" "$PREV_ITER_FILE"; then
+      log "WARN: iter-${ITERATION}.md missing required section: '$section'"
+      ITER_VALIDATION_FAILED=true
+    fi
+  done
+  if [[ "$ITER_VALIDATION_FAILED" == "true" ]]; then
+    log "iter-${ITERATION}.md failed section validation — counting as stall"
+    NEW_CONSEC=$((CONSECUTIVE_STALLS + 1))
+    NEW_TOTAL=$((TOTAL_STALLS + 1))
+    cp "$STATE_FILE" "${STATE_FILE}.bak" 2>/dev/null || true
+    flock -e -w 30 "$LOCK_FILE" bash -c "
+      jq '.consecutiveStalls=$NEW_CONSEC | .totalStalls=$NEW_TOTAL | .log += [{\"at\":\"$NOW\",\"event\":\"iter_validation_failed\",\"iteration\":$ITERATION}]' \
+        '$STATE_FILE' > '$STATE_FILE.tmp' && mv '$STATE_FILE.tmp' '$STATE_FILE'
+    "
+    # Update in-memory snapshot for stall checks below
+    CONSECUTIVE_STALLS=$NEW_CONSEC
+    TOTAL_STALLS=$NEW_TOTAL
+  fi
+fi
 
 # ── Step 3.5: Max iterations guard ───────────────────────────────────────────
 MAX_ITERATIONS=50
@@ -125,6 +162,7 @@ case "$STATUS" in
         NEW_CONSEC=$((CONSECUTIVE_STALLS + 1))
         NEW_TOTAL=$((TOTAL_STALLS + 1))
         NEW_STALL_MIN=$((TOTAL_STALL_MIN + STALL_MIN))
+        cp "$STATE_FILE" "${STATE_FILE}.bak" 2>/dev/null || true
         flock -e -w 30 "$LOCK_FILE" bash -c "
           jq '.status=\"active\" | .consecutiveStalls=$NEW_CONSEC | .totalStalls=$NEW_TOTAL | .totalStallMinutes=$NEW_STALL_MIN | .log += [{\"at\":\"$NOW\",\"event\":\"stall_auto_reset\",\"stall_minutes\":$STALL_MIN}]' \
             '$STATE_FILE' > '$STATE_FILE.tmp' && mv '$STATE_FILE.tmp' '$STATE_FILE'
@@ -166,6 +204,7 @@ if [[ -n "$PENDING_MUTATIONS" ]]; then
     AGE_MIN=$(( (NOW_EPOCH - PROPOSED_EPOCH) / 60 ))
     if [[ $AGE_MIN -ge 120 ]]; then
       log "Mutation unACKed for ${AGE_MIN}min — auto-invalidating"
+      cp "$STATE_FILE" "${STATE_FILE}.bak" 2>/dev/null || true
       flock -e -w 30 "$LOCK_FILE" bash -c "
         jq '.status=\"invalidated\" | .log += [{\"at\":\"$NOW\",\"event\":\"mutation_ack_timeout\",\"age_minutes\":$AGE_MIN}]' \
           '$STATE_FILE' > '$STATE_FILE.tmp' && mv '$STATE_FILE.tmp' '$STATE_FILE'
@@ -195,6 +234,7 @@ fi
 
 # ── Step 7: Set worker_spawned ───────────────────────────────────────────────
 NEXT_ITERATION=$((ITERATION + 1))
+cp "$STATE_FILE" "${STATE_FILE}.bak" 2>/dev/null || true
 flock -e -w 30 "$LOCK_FILE" bash -c "
   jq '.status=\"worker_spawned\" | .lastIterationAt=\"$NOW\" | .iterationCount=$NEXT_ITERATION' \
     '$STATE_FILE' > '$STATE_FILE.tmp' && mv '$STATE_FILE.tmp' '$STATE_FILE'
@@ -214,9 +254,18 @@ BUDGET=20480
   echo "Meta: $META_GOAL"
   echo "Iteration: $NEXT_ITERATION | Consecutive Stalls: $CONSECUTIVE_STALLS | Autonomy: $AUTONOMY"
   echo ""
-  echo "## Active Goals"
-  jq -r '.goals[] | select(.status=="pending") | "[\(.id)] \(.title) — \(.success_criteria)"' \
+  echo "## Goal This Iteration (focus here — complete this one goal)"
+  jq -r '[.goals[] | select(.status=="pending")] | first | "[\(.id)] \(.title) — \(.success_criteria)"' \
     "$SPRINT_PATH/goals.json" 2>/dev/null || echo "(no pending goals)"
+  echo ""
+  echo "## Completed Goals (reference only — do NOT redo these)"
+  COMPLETED=$(jq -r '.goals[] | select(.status=="complete") | "[\(.id)] \(.title) ✓"' \
+    "$SPRINT_PATH/goals.json" 2>/dev/null)
+  if [[ -n "$COMPLETED" ]]; then
+    echo "$COMPLETED"
+  else
+    echo "(none yet)"
+  fi
   echo ""
 
   # Component 2: last 2 iter files (5KB each max)

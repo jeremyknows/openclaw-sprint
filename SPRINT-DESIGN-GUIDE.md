@@ -62,6 +62,7 @@ The worker scans/researches and writes `goal-proposals.json` to the sprint direc
 
 ---
 
+
 ## Step 2: Define the Done State First
 
 Before writing any goals, write this sentence:

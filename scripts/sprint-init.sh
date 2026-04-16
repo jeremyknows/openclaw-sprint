@@ -8,7 +8,9 @@ set -euo pipefail
 WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/agents/main/workspace}"
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SPRINTS_DIR="$WORKSPACE/data/sprints"
-ACTIVE_THREADS="$WORKSPACE/config/active-threads.json"
+# Thread registry moved 2026-04-16: Librarian owns active-threads.json in her atlas workspace.
+# Sprint-specific state (sprint-registry, sprints/, sprint-runs) stays in Watson's workspace.
+ACTIVE_THREADS="$HOME/atlas/agents/librarian/config/active-threads.json"
 SPRINT_REGISTRY="$WORKSPACE/data/sprint-registry.json"
 EVENT_BUS="$HOME/.openclaw/events/bus.jsonl"
 
